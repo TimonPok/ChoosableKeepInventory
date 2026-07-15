@@ -127,7 +127,7 @@ public class ModEvents {
         if (data.getPvpBypass(victimName) || !wasInCombatBeforeDeath) {
             victim.serverLevel().getGameRules().getRule(GameRules.RULE_KEEPINVENTORY).set(true, victim.getServer());
         } else {
-            victim.sendSystemMessage(Component.literal("§cYou dropped your items because you were in PvP combat!"));
+            victim.sendSystemMessage(Component.literal("§cYou died in PVP, your items dropped."));
         }
     }
 
