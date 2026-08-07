@@ -38,7 +38,6 @@ public class ModCommands {
                             boolean inCombat = ModEvents.isCurrentlyInCombat(username);
                             boolean inDuel = DuelManager.isInAnyDuel(username);
 
-                            // Build a beautifully formatted status card
                             MutableComponent card = Component.literal("\n§b========= [ KEEP INVENTORY STATUS ] =========")
                                     .append(Component.literal("\n§7Player: §f" + username))
                                     .append(Component.literal("\n§7Keep Inventory (PvE): " + (globalEnabled ? "§cENABLED" : "§cDISABLED")))
@@ -51,8 +50,8 @@ public class ModCommands {
                             return 1;
                         })
                 )
-                // Sub-command: /keepinv global [true/false]
-                .then(Commands.literal("global")
+                // Sub-command: /keepinv toggle [true/false]
+                .then(Commands.literal("enabled")
                         .then(Commands.argument("enabled", BoolArgumentType.bool())
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
@@ -67,8 +66,8 @@ public class ModCommands {
                                 })
                         )
                 )
-                // Sub-command: /keepinv pvp [true/false]
-                .then(Commands.literal("pvp")
+                // Sub-command: /keepinv pvpSafe [true/false]
+                .then(Commands.literal("pvpSafe")
                         .then(Commands.argument("bypass", BoolArgumentType.bool())
                                 .executes(context -> {
                                     CommandSourceStack source = context.getSource();
