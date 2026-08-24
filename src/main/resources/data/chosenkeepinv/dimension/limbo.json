@@ -1,0 +1,16 @@
+{
+  "type": "chosenkeepinv:limbo_type",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "layers": [
+        { "block": "minecraft:bedrock", "height": 1 },
+        { "block": "minecraft:red_sandstone", "height": 60 },
+        { "block": "minecraft:red_sandstone", "height": 3 },
+        { "block": "minecraft:red_sand", "height": 4 }
+      ],
+      "biome": "minecraft:desert",
+      "structure_overrides": []
+    }
+  }
+}
