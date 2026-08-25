@@ -181,11 +181,30 @@ public class voidHandler {
                     player.setGameMode(GameType.SURVIVAL);
 
                     String username = player.getScoreboardName();
+                    player.getInventory().clearContent();
+
                     if (data.hasLimboInventory(username)) {
-                        player.getInventory().clearContent();
-                        CompoundTag wrapperTag = data.loadAndRemoveLimboInventory(username);
-                        ListTag inventoryList = wrapperTag.getList("Items", 10);
-                        player.getInventory().load(inventoryList);
+                        CompoundTag savedInv = data.loadAndRemoveLimboInventory(username);
+                        if (savedInv != null) {
+                            // 1. Возвращаем ванильный инвентарь
+                            if (savedInv.contains("Items")) {
+                                ListTag inventoryList = savedInv.getList("Items", 10);
+                                player.getInventory().load(inventoryList);
+                            }
+
+                            // 2. БЕЗ API: Возвращаем Curios из скрытого тега
+                            if (savedInv.contains("CuriosRawData")) {
+                                CompoundTag playerFullNbt = new CompoundTag();
+                                player.saveWithoutId(playerFullNbt);
+
+                                if (!playerFullNbt.contains("ForgeCaps")) {
+                                    playerFullNbt.put("ForgeCaps", new CompoundTag());
+                                }
+
+                                playerFullNbt.getCompound("ForgeCaps").put("curios:inventory", savedInv.getCompound("CuriosRawData"));
+                                player.load(playerFullNbt); // Применяем изменения к игроку
+                            }
+                        }
                     }
                 }
             }

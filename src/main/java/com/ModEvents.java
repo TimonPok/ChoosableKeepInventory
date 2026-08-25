@@ -1,15 +1,21 @@
 package com;
 
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameRules;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.capabilities.EntityCapability;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
@@ -34,7 +40,6 @@ public class ModEvents {
             String victimName = victim.getScoreboardName();
             String attackerName = attacker.getScoreboardName();
 
-            // 1. Дуэли пропускают систему тегов
             if (DuelManager.isInDuelWithEachOther(victimName, attackerName)) {
                 return;
             }
@@ -74,6 +79,7 @@ public class ModEvents {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         String username = player.getScoreboardName();
 
+        // 1. Ваша старая логика Combat Tag (отображение секунд над хотбаром)
         if (isCurrentlyInCombat(username)) {
             long lastCombat = pvpCooldowns.getOrDefault(username, 0L);
             long timePassed = System.currentTimeMillis() - lastCombat;
@@ -84,9 +90,22 @@ public class ModEvents {
                     true
             );
         }
+
+        if (player.tickCount % 10 == 0) {
+            if (net.neoforged.fml.ModList.get().isLoaded("curios")) {
+                ModPersistentData data = ModPersistentData.get(player.serverLevel());
+
+                if (data.hasDeadCurios(username)) {
+                    CompoundTag savedCurios = data.loadAndRemoveDeadCurios(username);
+
+                    CuriousCompat.loadCuriosInventory(player, savedCurios);
+                    //System.out.println("[ChosenKeepInv] Curios post-respawn tick restore triggered for " + username);
+                }
+            }
+        }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onPlayerDeath(LivingDeathEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer victim)) return;
         String victimName = victim.getScoreboardName();
@@ -129,24 +148,41 @@ public class ModEvents {
         }
 
         if (shouldKeepInventory) {
+            // Сохранение ванильного инвентаря
             List<ItemStack> copiedInventory = new ArrayList<>();
             for (int i = 0; i < victim.getInventory().getContainerSize(); i++) {
                 copiedInventory.add(victim.getInventory().getItem(i).copy());
             }
             savedInventoriesCache.put(victimName, copiedInventory);
+
+            if (net.neoforged.fml.ModList.get().isLoaded("curios")) {
+                CompoundTag curiosNbt = CuriousCompat.saveCuriosInventory(victim);
+
+                // ПРОВЕРКА: Проверяем, что Curios действительно вернул нам данные, а не пустышку
+                if (curiosNbt.contains("CuriosList") && !curiosNbt.getList("CuriosList", 10).isEmpty()) {
+                    data.saveDeadCurios(victimName, curiosNbt);
+                    //System.out.println("[ChosenKeepInv] Curios SUCCESSFULLY backed up via Official API for " + victimName);
+                } else {
+                    System.out.println("[ChosenKeepInv] WARNING: Curios returned EMPTY inventory for " + victimName + " at death!");
+                }
+            }
         }
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onPlayerDrops(LivingDropsEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         String username = player.getScoreboardName();
-
-        if (player.serverLevel().getGameRules().getBoolean(GameRules.RULE_KEEPINVENTORY)) {
-            return;
-        }
-
         if (savedInventoriesCache.containsKey(username)) {
+            ModPersistentData data = ModPersistentData.get(player.serverLevel());
+            CompoundTag fallbackCuriosTag = new CompoundTag();
+            event.getDrops().removeIf(itemEntity -> {
+                ItemStack stack = itemEntity.getItem();
+                return false;
+            });
+
+
+            event.getDrops().clear();
             event.setCanceled(true);
         }
     }
@@ -157,10 +193,11 @@ public class ModEvents {
 
         ServerPlayer newPlayer = (ServerPlayer) event.getEntity();
         String username = newPlayer.getScoreboardName();
+        ModPersistentData data = ModPersistentData.get(newPlayer.serverLevel());
 
+        // Восстановление ванильного инвентаря
         if (savedInventoriesCache.containsKey(username)) {
             List<ItemStack> savedItems = savedInventoriesCache.remove(username);
-
             for (int i = 0; i < savedItems.size(); i++) {
                 if (i < newPlayer.getInventory().getContainerSize()) {
                     newPlayer.getInventory().setItem(i, savedItems.get(i));

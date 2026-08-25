@@ -17,10 +17,12 @@ import java.util.Set;
 
 public class ModPersistentData extends SavedData {
     private final Map<String, Boolean> playerChoices = new HashMap<>();
-    private final Map<String, Boolean> pvpBypassChoices = new HashMap<>(); // New map for PvP preference
+    private final Map<String, Boolean> pvpBypassChoices = new HashMap<>();
     private final Map<String, CompoundTag> limboInventories = new HashMap<>();
-
     private final Set<String> usedLimboDoors = new HashSet<>();
+
+    // НОВОЕ: Сейф для Curios вещей игроков, которые умерли, но еще не возродились
+    private final Map<String, CompoundTag> deadCuriosInventories = new HashMap<>();
 
     public void markDoorAsUsed(BlockPos pos) {
         usedLimboDoors.add(pos.getX() + "," + pos.getY() + "," + pos.getZ());
@@ -40,16 +42,15 @@ public class ModPersistentData extends SavedData {
         this.setDirty();
     }
 
-    // New getter for PvP bypass choice
     public boolean getPvpBypass(String username) {
         return pvpBypassChoices.getOrDefault(username, false);
     }
 
-    // New setter for PvP bypass choice
     public void setPvpBypass(String username, boolean value) {
         pvpBypassChoices.put(username, value);
         this.setDirty();
     }
+
     public void saveLimboInventory(String username, CompoundTag inventoryTag) {
         limboInventories.put(username, inventoryTag);
         this.setDirty();
@@ -66,6 +67,25 @@ public class ModPersistentData extends SavedData {
     public boolean hasLimboInventory(String username) {
         return limboInventories.containsKey(username);
     }
+
+    // НОВЫЕ МЕТОДЫ: Для сохранения и извлечения Curios данных при смерти
+    public void saveDeadCurios(String username, CompoundTag curiosTag) {
+        deadCuriosInventories.put(username, curiosTag);
+        this.setDirty();
+    }
+
+    public CompoundTag loadAndRemoveDeadCurios(String username) {
+        CompoundTag tag = deadCuriosInventories.remove(username);
+        if (tag != null) {
+            this.setDirty();
+        }
+        return tag;
+    }
+
+    public boolean hasDeadCurios(String username) {
+        return deadCuriosInventories.containsKey(username);
+    }
+
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         CompoundTag playersTag = new CompoundTag();
@@ -76,7 +96,6 @@ public class ModPersistentData extends SavedData {
         pvpBypassChoices.forEach(pvpBypassTag::putBoolean);
         tag.put("pvpBypassChoices", pvpBypassTag);
 
-        // Сохраняем инвентари Лимбо
         CompoundTag limboTag = new CompoundTag();
         limboInventories.forEach(limboTag::put);
         tag.put("limboInventories", limboTag);
@@ -84,6 +103,11 @@ public class ModPersistentData extends SavedData {
         ListTag doorsTag = new ListTag();
         usedLimboDoors.forEach(coord -> doorsTag.add(StringTag.valueOf(coord)));
         tag.put("usedLimboDoors", doorsTag);
+
+        // НОВОЕ: Запись Curios на диск
+        CompoundTag deadCuriosTag = new CompoundTag();
+        deadCuriosInventories.forEach(deadCuriosTag::put);
+        tag.put("deadCuriosInventories", deadCuriosTag);
 
         return tag;
     }
@@ -98,25 +122,35 @@ public class ModPersistentData extends SavedData {
             }
         }
 
-
         if (tag.contains("pvpBypassChoices")) {
             CompoundTag pvpBypassTag = tag.getCompound("pvpBypassChoices");
             for (String username : pvpBypassTag.getAllKeys()) {
                 data.pvpBypassChoices.put(username, pvpBypassTag.getBoolean(username));
             }
         }
+
         if (tag.contains("limboInventories")) {
             CompoundTag limboTag = tag.getCompound("limboInventories");
             for (String username : limboTag.getAllKeys()) {
                 data.limboInventories.put(username, limboTag.getCompound(username));
             }
         }
+
         if (tag.contains("usedLimboDoors")) {
-            ListTag doorsTag = tag.getList("usedLimboDoors", 8); // 8 - это тип StringTag
+            ListTag doorsTag = tag.getList("usedLimboDoors", 8);
             for (int i = 0; i < doorsTag.size(); i++) {
                 data.usedLimboDoors.add(doorsTag.getString(i));
             }
         }
+
+        // НОВОЕ: Чтение Curios с диска при запуске сервера
+        if (tag.contains("deadCuriosInventories")) {
+            CompoundTag deadCuriosTag = tag.getCompound("deadCuriosInventories");
+            for (String username : deadCuriosTag.getAllKeys()) {
+                data.deadCuriosInventories.put(username, deadCuriosTag.getCompound(username));
+            }
+        }
+
         return data;
     }
 
