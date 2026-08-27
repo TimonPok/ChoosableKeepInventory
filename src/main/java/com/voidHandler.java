@@ -80,7 +80,6 @@ public class voidHandler {
 
         player.getInventory().clearContent();
 
-        // Книга
         ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
         String page1Text = "...and the hero fell into the emptiness of under the world..\n\n"
                 + "He expected pain, death, just return to the begining...\n\n"
@@ -98,7 +97,6 @@ public class voidHandler {
         book.set(DataComponents.WRITTEN_BOOK_CONTENT, content);
         player.getInventory().add(book);
 
-        // Телепортируем в случайную точку
         int playerX = player.getRandom().nextInt(1000) - 500;
         int playerZ = player.getRandom().nextInt(1000) - 500;
         int surfaceY = 4;
@@ -108,7 +106,6 @@ public class voidHandler {
         player.setHealth(2.0f);
     }
 
-    // БЕЗОПАСНАЯ ГЕНЕРАЦИЯ ДВЕРЕЙ БЕЗ БЕСКОНЕЧНОГО ЦИКЛА
     @SubscribeEvent
     public static void onChunkLoad(ChunkDataEvent.Load event) {
         if (!(event.getLevel() instanceof ServerLevel level)) return;
@@ -130,16 +127,12 @@ public class voidHandler {
             ModPersistentData data = ModPersistentData.get(level);
 
             if (!data.isDoorUsed(doorPos)) {
-                // ВАЖНО: Используем chunk.setBlockState(...) БЕЗ вызова обновлений мира!
-                // Это предотвращает рекурсию и зависание сервера.
 
-                // Строим платформу (Y = 3)
                 for (int x = -1; x <= 1; x++) {
                     for (int z = -1; z <= 1; z++) {
                         chunk.setBlockState(doorPos.offset(x, -1, z), Blocks.CRYING_OBSIDIAN.defaultBlockState(), false);
                     }
                 }
-                // Ставим низ и верх двери (Y = 4 и Y = 5)
                 chunk.setBlockState(doorPos, Blocks.DARK_OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER), false);
                 chunk.setBlockState(doorPos.above(), Blocks.DARK_OAK_DOOR.defaultBlockState().setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), false);
             }
@@ -164,7 +157,6 @@ public class voidHandler {
                     BlockPos spawnPos = overworld.getSharedSpawnPos();
                     ModPersistentData data = ModPersistentData.get(overworld);
 
-                    // При клике на дверь мы на сервере, тут setBlockAndUpdate использовать безопасно
                     ServerLevel limbo = player.serverLevel();
                     limbo.setBlockAndUpdate(doorBasePos.above(), Blocks.AIR.defaultBlockState());
                     limbo.setBlockAndUpdate(doorBasePos, Blocks.AIR.defaultBlockState());
@@ -186,13 +178,12 @@ public class voidHandler {
                     if (data.hasLimboInventory(username)) {
                         CompoundTag savedInv = data.loadAndRemoveLimboInventory(username);
                         if (savedInv != null) {
-                            // 1. Возвращаем ванильный инвентарь
+
                             if (savedInv.contains("Items")) {
                                 ListTag inventoryList = savedInv.getList("Items", 10);
                                 player.getInventory().load(inventoryList);
                             }
 
-                            // 2. БЕЗ API: Возвращаем Curios из скрытого тега
                             if (savedInv.contains("CuriosRawData")) {
                                 CompoundTag playerFullNbt = new CompoundTag();
                                 player.saveWithoutId(playerFullNbt);
@@ -202,7 +193,7 @@ public class voidHandler {
                                 }
 
                                 playerFullNbt.getCompound("ForgeCaps").put("curios:inventory", savedInv.getCompound("CuriosRawData"));
-                                player.load(playerFullNbt); // Применяем изменения к игроку
+                                player.load(playerFullNbt);
                             }
                         }
                     }
