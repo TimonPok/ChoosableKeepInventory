@@ -31,7 +31,6 @@ public class ModEvents {
     private static final Map<String, String> combatRelations = new HashMap<>();
     private static final long COOLDOWN_MS = 20000; // 20 секунд
 
-    // Безопасный кэш для хранения глубоких копий предметов игроков до их возрождения
     private static final Map<String, List<ItemStack>> savedInventoriesCache = new HashMap<>();
 
     @SubscribeEvent
@@ -47,12 +46,10 @@ public class ModEvents {
             ModPersistentData victimData = ModPersistentData.get(victim.serverLevel());
             ModPersistentData attackerData = ModPersistentData.get(attacker.serverLevel());
 
-            // 2. Если у кого-то включен PvP-bypass, не вешаем боевой тег
             if (attackerData.getPvpBypass(attackerName) || victimData.getPvpBypass(victimName)) {
                 return;
             }
 
-            // 3. Обычный боевой тег
             long currentTime = System.currentTimeMillis();
             if (!isCurrentlyInCombat(victimName)) {
                 Component text = Component.literal("§cPVP active, keep inventory disabled. Press ")
@@ -79,7 +76,6 @@ public class ModEvents {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         String username = player.getScoreboardName();
 
-        // 1. Ваша старая логика Combat Tag (отображение секунд над хотбаром)
         if (isCurrentlyInCombat(username)) {
             long lastCombat = pvpCooldowns.getOrDefault(username, 0L);
             long timePassed = System.currentTimeMillis() - lastCombat;
@@ -158,7 +154,6 @@ public class ModEvents {
             if (net.neoforged.fml.ModList.get().isLoaded("curios")) {
                 CompoundTag curiosNbt = CuriousCompat.saveCuriosInventory(victim);
 
-                // ПРОВЕРКА: Проверяем, что Curios действительно вернул нам данные, а не пустышку
                 if (curiosNbt.contains("CuriosList") && !curiosNbt.getList("CuriosList", 10).isEmpty()) {
                     data.saveDeadCurios(victimName, curiosNbt);
                     //System.out.println("[ChosenKeepInv] Curios SUCCESSFULLY backed up via Official API for " + victimName);
@@ -195,7 +190,6 @@ public class ModEvents {
         String username = newPlayer.getScoreboardName();
         ModPersistentData data = ModPersistentData.get(newPlayer.serverLevel());
 
-        // Восстановление ванильного инвентаря
         if (savedInventoriesCache.containsKey(username)) {
             List<ItemStack> savedItems = savedInventoriesCache.remove(username);
             for (int i = 0; i < savedItems.size(); i++) {
