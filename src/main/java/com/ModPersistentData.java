@@ -21,7 +21,6 @@ public class ModPersistentData extends SavedData {
     private final Map<String, CompoundTag> limboInventories = new HashMap<>();
     private final Set<String> usedLimboDoors = new HashSet<>();
 
-    // НОВОЕ: Сейф для Curios вещей игроков, которые умерли, но еще не возродились
     private final Map<String, CompoundTag> deadCuriosInventories = new HashMap<>();
 
     public void markDoorAsUsed(BlockPos pos) {
@@ -103,8 +102,7 @@ public class ModPersistentData extends SavedData {
         ListTag doorsTag = new ListTag();
         usedLimboDoors.forEach(coord -> doorsTag.add(StringTag.valueOf(coord)));
         tag.put("usedLimboDoors", doorsTag);
-
-        // НОВОЕ: Запись Curios на диск
+        
         CompoundTag deadCuriosTag = new CompoundTag();
         deadCuriosInventories.forEach(deadCuriosTag::put);
         tag.put("deadCuriosInventories", deadCuriosTag);
