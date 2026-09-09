@@ -16,7 +16,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
 @EventBusSubscriber(modid = "chosenkeepinv")
 public class ModCommands {
-
+    private static boolean TogglePvPSafe() {return KeepinvConfig.PvpSafeDisable.get();}
     @SubscribeEvent
     public static void registerCommands(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
@@ -41,7 +41,7 @@ public class ModCommands {
                             MutableComponent card = Component.literal("\n§b========= [ KEEP INVENTORY STATUS ] =========")
                                     .append(Component.literal("\n§7Player: §f" + username))
                                     .append(Component.literal("\n§7Keep Inventory (PvE): " + (globalEnabled ? "§cENABLED" : "§cDISABLED")))
-                                    .append(Component.literal("\n§7Keep inventory in pvp: " + (pvpBypass ? "§aENABLED §7(Items wont drop)" : "§eDISABLED §7(PvP items drop)")))
+                                    .append(Component.literal(TogglePvPSafe() ? "" : ("\n§7Keep inventory in pvp: " + (pvpBypass ? "§aENABLED §7(Items wont drop)" : "§eDISABLED §7(PvP items drop)"))))
                                     .append(Component.literal("\n§7Current fight status: " + (inCombat ? "§c⚔ IN PVP ⚔" : "§a✔ SAFE ✔")))
                                     .append(Component.literal("\n§7Duel status: " + (inDuel ? "§d⚔ IN DUEL ⚔" : "§7NO ACTIVE DUELS")))
                                     .append(Component.literal("\n§b=============================================\n"));
@@ -66,27 +66,36 @@ public class ModCommands {
                                 })
                         )
                 )
-                // Sub-command: /keepinv pvpSafe [true/false]
-//                .then(Commands.literal("pvpSafe")
-//                        .then(Commands.argument("bypass", BoolArgumentType.bool())
-//                                .executes(context -> {
-//                                    CommandSourceStack source = context.getSource();
-//                                    if (!(source.getEntity() instanceof ServerPlayer player)) return 0;
-//
-//                                    boolean bypass = BoolArgumentType.getBool(context, "bypass");
-//                                    String username = player.getScoreboardName();
-//
-//                                    ModPersistentData.get(player.serverLevel()).setPvpBypass(username, bypass);
-//
-//                                    if (bypass) {
-//                                        player.sendSystemMessage(Component.literal("§aYour inventory is SAFE in PVP."));
-//                                    } else {
-//                                        player.sendSystemMessage(Component.literal("§eYour inventory is NOT SAVE in PVP anymore, be carefull."));
-//                                    }
-//                                    return 1;
-//                                })
-//                        )
-//                )
+                //Sub-command: /keepinv pvpSafe [true/false]
+
+                .then(Commands.literal("pvpSafe")
+                        .then(Commands.argument("bypass", BoolArgumentType.bool())
+                                .executes(context -> {
+                                    CommandSourceStack source = context.getSource();
+                                    if (!(source.getEntity() instanceof ServerPlayer player)) return 0;
+
+
+                                    String username = player.getScoreboardName();
+
+                                    if (TogglePvPSafe()){
+                                        player.sendSystemMessage(Component.literal("PVP Safety is disabled on this server"));
+                                        return 1;
+                                    }
+                                    else {
+                                        boolean bypass = BoolArgumentType.getBool(context, "bypass");
+
+                                        ModPersistentData.get(player.serverLevel()).setPvpBypass(username, bypass);
+
+                                        if (bypass) {
+                                            player.sendSystemMessage(Component.literal("§aYour inventory is SAFE in PVP."));
+                                        } else {
+                                            player.sendSystemMessage(Component.literal("§eYour inventory is NOT SAVE in PVP anymore, be carefull."));
+                                        }
+                                        return 1;
+                                    }
+                                })
+                        )
+                )
         );
 
         // /duel command tree

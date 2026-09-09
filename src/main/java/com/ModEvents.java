@@ -1,5 +1,6 @@
 package com;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.ClickEvent;
@@ -75,6 +76,8 @@ public class ModEvents {
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         String username = player.getScoreboardName();
+        ModPersistentData data = ModPersistentData.get(player.serverLevel());
+
 
         if (isCurrentlyInCombat(username)) {
             long lastCombat = pvpCooldowns.getOrDefault(username, 0L);
@@ -89,7 +92,6 @@ public class ModEvents {
 
         if (player.tickCount % 10 == 0) {
             if (net.neoforged.fml.ModList.get().isLoaded("curios")) {
-                ModPersistentData data = ModPersistentData.get(player.serverLevel());
 
                 if (data.hasDeadCurios(username)) {
                     CompoundTag savedCurios = data.loadAndRemoveDeadCurios(username);
@@ -99,7 +101,62 @@ public class ModEvents {
                 }
             }
         }
+        if (player.level().dimension().equals(voidHandler.LIMBO_KEY)) {
+
+
+            data.tickLimboTime(username);
+            int currentTicks = data.getLimboTime(username);
+
+            if (currentTicks % 20 == 0) {
+                int secondsLeft = Math.max(0, 120 - (currentTicks / 20));
+                player.displayClientMessage(
+                        Component.literal("§eTime left in Limbo: §b" + secondsLeft + "s"),
+                        true
+                );
+            }
+
+            if (currentTicks >= 2400) {
+                net.minecraft.server.level.ServerLevel overworld = player.server.getLevel(net.minecraft.world.level.Level.OVERWORLD);
+                if (overworld != null) {
+                    BlockPos spawnPos = overworld.getSharedSpawnPos();
+
+
+                    player.getInventory().clearContent();
+
+                    if (net.neoforged.fml.ModList.get().isLoaded("curios")) {
+                        player.getInventory().clearContent();
+                    }
+
+
+                    if (data.hasLimboInventory(username)) {
+                        CompoundTag savedInv = data.loadAndRemoveLimboInventory(username);
+                        if (savedInv != null) {
+                            // Ванильные вещи
+                            if (savedInv.contains("Items")) {
+                                net.minecraft.nbt.ListTag inventoryList = savedInv.getList("Items", 10);
+                                player.getInventory().load(inventoryList);
+                            }
+
+                            if (net.neoforged.fml.ModList.get().isLoaded("curios") && savedInv.contains("CuriosList")) {
+                                CuriousCompat.loadCuriosInventory(player, savedInv);
+                            }
+                        }
+                    }
+
+                    player.teleportTo(overworld, spawnPos.getX() + 0.5, spawnPos.getY() + 1.0, spawnPos.getZ() + 0.5, player.getYRot(), player.getXRot());
+                    player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                    player.setHealth(player.getMaxHealth());
+
+                    player.sendSystemMessage(Component.literal("§aYour time in Limbo is up! You have been automatically returned to the Overworld."));
+                }
+            }
+        } else {
+            if (data.getLimboTime(username) > 0) {
+                data.removeLimboTimer(username);
+            }
+        }
     }
+
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onPlayerDeath(LivingDeathEvent event) {
@@ -110,8 +167,8 @@ public class ModEvents {
         boolean wasInCombatBeforeDeath = isCurrentlyInCombat(victimName);
 
 
-        pvpCooldowns.remove(victimName);
-        String attackerName = combatRelations.remove(victimName);
+        ModEvents.pvpCooldowns.remove(victimName);
+        String attackerName = ModEvents.combatRelations.remove(victimName);
         if (attackerName != null) {
             pvpCooldowns.remove(attackerName);
             ServerPlayer attacker = victim.getServer().getPlayerList().getPlayerByName(attackerName);
@@ -134,8 +191,7 @@ public class ModEvents {
                 }
             }
             shouldKeepInventory = true;
-        }
-        else if (data.getChoice(victimName)) {
+        } else if (data.getChoice(victimName)) {
             if (data.getPvpBypass(victimName) || !wasInCombatBeforeDeath) {
                 shouldKeepInventory = true;
             } else {
@@ -144,7 +200,6 @@ public class ModEvents {
         }
 
         if (shouldKeepInventory) {
-            // Сохранение ванильного инвентаря
             List<ItemStack> copiedInventory = new ArrayList<>();
             for (int i = 0; i < victim.getInventory().getContainerSize(); i++) {
                 copiedInventory.add(victim.getInventory().getItem(i).copy());
@@ -212,3 +267,4 @@ public class ModEvents {
         player.displayClientMessage(Component.literal(""), true);
     }
 }
+

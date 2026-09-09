@@ -58,11 +58,12 @@ public class voidHandler {
                     if (limbo != null) {
                         event.setCanceled(true);
                         sendToLimbo(player, limbo, data, username);
-                    }
+                    };
                 }
             }
         }
     }
+
 
     private static void sendToLimbo(ServerPlayer player, ServerLevel limbo, ModPersistentData data, String username) {
         System.out.println("[Limbo Mod] Player " + username + " sent to Limbo!");
@@ -100,6 +101,10 @@ public class voidHandler {
         int playerX = player.getRandom().nextInt(1000) - 500;
         int playerZ = player.getRandom().nextInt(1000) - 500;
         int surfaceY = 4;
+
+        ChunkPos targetChunk = new ChunkPos(playerX >> 4, playerZ >> 4);
+        limbo.getChunkSource().getChunk(targetChunk.x, targetChunk.z, net.minecraft.world.level.chunk.status.ChunkStatus.FULL, true);
+
 
         player.teleportTo(limbo, playerX + 0.5, surfaceY + 1, playerZ + 0.5, player.getYRot(), player.getXRot());
         player.setGameMode(GameType.ADVENTURE);
@@ -174,6 +179,7 @@ public class voidHandler {
 
                     String username = player.getScoreboardName();
                     player.getInventory().clearContent();
+                    data.removeLimboTimer(username);
 
                     if (data.hasLimboInventory(username)) {
                         CompoundTag savedInv = data.loadAndRemoveLimboInventory(username);

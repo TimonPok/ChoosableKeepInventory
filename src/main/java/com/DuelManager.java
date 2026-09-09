@@ -21,7 +21,6 @@ public class DuelManager {
         return pendingInvites.remove(receiver);
     }
 
-    // UPDATED METHOD: Clears active PvP tags when the duel is officially started
     public static void startDuel(ServerPlayer playerA, ServerPlayer playerB) {
         String nameA = playerA.getScoreboardName();
         String nameB = playerB.getScoreboardName();
@@ -32,7 +31,7 @@ public class DuelManager {
         activeDuels.put(nameA, nameB);
         activeDuels.put(nameB, nameA);
 
-        // CRITICAL FIX: Instantly remove their active combat statuses
+
         ModEvents.clearCombatTag(playerA);
         ModEvents.clearCombatTag(playerB);
     }

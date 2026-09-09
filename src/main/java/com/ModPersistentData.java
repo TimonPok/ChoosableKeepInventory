@@ -19,9 +19,24 @@ public class ModPersistentData extends SavedData {
     private final Map<String, Boolean> playerChoices = new HashMap<>();
     private final Map<String, Boolean> pvpBypassChoices = new HashMap<>();
     private final Map<String, CompoundTag> limboInventories = new HashMap<>();
+    private final Map<String,Integer> limboTimers = new HashMap<>();
+
     private final Set<String> usedLimboDoors = new HashSet<>();
 
     private final Map<String, CompoundTag> deadCuriosInventories = new HashMap<>();
+
+    public int getLimboTime(String username) {
+        return limboTimers.getOrDefault(username, 0);
+    }
+    public void tickLimboTime(String username) {
+        limboTimers.put(username, getLimboTime(username) + 1);
+        this.setDirty();
+    }
+    public void removeLimboTimer(String username) {
+        if (limboTimers.remove(username) != null) {
+            this.setDirty();
+        }
+    }
 
     public void markDoorAsUsed(BlockPos pos) {
         usedLimboDoors.add(pos.getX() + "," + pos.getY() + "," + pos.getZ());
@@ -67,7 +82,6 @@ public class ModPersistentData extends SavedData {
         return limboInventories.containsKey(username);
     }
 
-    // НОВЫЕ МЕТОДЫ: Для сохранения и извлечения Curios данных при смерти
     public void saveDeadCurios(String username, CompoundTag curiosTag) {
         deadCuriosInventories.put(username, curiosTag);
         this.setDirty();
@@ -107,6 +121,10 @@ public class ModPersistentData extends SavedData {
         deadCuriosInventories.forEach(deadCuriosTag::put);
         tag.put("deadCuriosInventories", deadCuriosTag);
 
+        CompoundTag timersTag = new CompoundTag();
+        limboTimers.forEach(timersTag::putInt);
+        tag.put("limboTimers", timersTag);
+
         return tag;
     }
 
@@ -141,11 +159,17 @@ public class ModPersistentData extends SavedData {
             }
         }
 
-        // НОВОЕ: Чтение Curios с диска при запуске сервера
         if (tag.contains("deadCuriosInventories")) {
             CompoundTag deadCuriosTag = tag.getCompound("deadCuriosInventories");
             for (String username : deadCuriosTag.getAllKeys()) {
                 data.deadCuriosInventories.put(username, deadCuriosTag.getCompound(username));
+            }
+        }
+
+        if (tag.contains("limboTimers")) {
+            CompoundTag timersTag = tag.getCompound("limboTimers");
+            for (String username : timersTag.getAllKeys()) {
+                data.limboTimers.put(username, timersTag.getInt(username));
             }
         }
 

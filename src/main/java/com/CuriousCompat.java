@@ -24,11 +24,9 @@ public class CuriousCompat {
             ListTag curiosList = wrapperTag.getList("CuriosList", 10);
 
             CuriosApi.getCuriosInventory(player).ifPresent(handler -> {
-                // Загружаем предметы в память сервера
                 handler.loadInventory(curiosList);
             });
 
-            // Синхронизируем меню, когда игрок уже полностью в мире
             if (player.inventoryMenu != null) {
                 player.inventoryMenu.broadcastFullState();
                 player.inventoryMenu.broadcastChanges();
