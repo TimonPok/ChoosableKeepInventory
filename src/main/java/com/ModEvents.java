@@ -39,10 +39,13 @@ public class ModEvents {
         if (event.getEntity() instanceof ServerPlayer victim && event.getSource().getEntity() instanceof ServerPlayer attacker) {
             String victimName = victim.getScoreboardName();
             String attackerName = attacker.getScoreboardName();
+            if (victimName.equals(attackerName)) return;
 
             if (DuelManager.isInDuelWithEachOther(victimName, attackerName)) {
                 return;
             }
+
+
 
             ModPersistentData victimData = ModPersistentData.get(victim.serverLevel());
             ModPersistentData attackerData = ModPersistentData.get(attacker.serverLevel());

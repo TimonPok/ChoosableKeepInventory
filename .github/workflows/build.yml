@@ -1,25 +1,37 @@
-name: Build
+name: NeoForge Auto Build
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
 
-      - name: Setup JDK 21
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
           distribution: 'temurin'
+          java-version: '21'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build with Gradle
+      - name: Grant Execute Permissions for Gradlew
+        run: chmod +x gradlew
+
+      - name: Build Mod Jar
         run: ./gradlew build
+
+      - name: Upload Mod Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoForge-Mod-Builds
+          path: build/libs/*.jar
